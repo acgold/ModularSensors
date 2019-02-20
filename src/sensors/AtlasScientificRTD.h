@@ -1,12 +1,14 @@
 /*
+ * AtlasScientificRTD.h
+ * This file is part of the EnviroDIY modular sensors library for Arduino
  *
- *This file was created by Sara Damiano and edited for use of Atlas Scientific Products by Adam Gold
+ * Initial developement for Atlas Sensors was done by Adam Gold
+ * Files were edited by Sara Damiano
  *
- * The output from the Atlas Scientifc RTD is the range in degrees C.
- *     Accuracy is ± __
- *     Range is __
- *
- * Warm up time to completion of header:  __ ms
+ * The output from the Atlas Scientifc RTD is the temperature in degrees C.
+ *     Accuracy is ± (0.10°C + 0.0017 x °C)
+ *     Range is -126.000 °C − 1254 °C
+ *     Resolution is 0.001 °C
  */
 
 // Header Guards
@@ -17,32 +19,34 @@
 // #define DEBUGGING_SERIAL_OUTPUT Serial
 
 // Included Dependencies
-#include "ModSensorDebugger.h"
 #include "VariableBase.h"
-#include "SensorBase.h"
-#include <Wire.h>
+#include "sensors/AtlasParent.h"
 
 // I2C address
-#define RTDaddress 102
+#define ATLAS_RTD_I2C_ADDR 0x66  // 102
 
 // Sensor Specific Defines
-#define ATLASRTD_NUM_VARIABLES 1
-#define ATLASRTD_WARM_UP_TIME_MS 0
-#define ATLASRTD_STABILIZATION_TIME_MS 0
-#define ATLASRTD_MEASUREMENT_TIME_MS 0
-#define ATLASRTD_RESOLUTION 4
-#define ATLASRTD_VAR_NUM 0
+#define ATLAS_RTD_NUM_VARIABLES 1
 
-// The main class for the MaxBotix Sonar
-class AtlasScientificRTD : public Sensor
+#define ATLAS_RTD_WARM_UP_TIME_MS 0
+#define ATLAS_RTD_STABILIZATION_TIME_MS 0
+#define ATLAS_RTD_MEASUREMENT_TIME_MS 600
+
+#define ATLAS_RTD_RESOLUTION 3
+#define ATLAS_RTD_VAR_NUM 0
+
+// The main class for the Atlas Scientific RTD temperature sensor
+class AtlasScientificRTD : public AtlasParent
 {
 public:
-    AtlasScientificRTD(int8_t powerPin = 22, uint8_t measurementsToAverage = 1);
-    ~AtlasScientificRTD();
-    String getSensorLocation(void) override;
-    bool setup(void) override;
-    // float collectData(void); //Added this back in
-    bool addSingleMeasurementResult(void) override;
+    AtlasScientificRTD(int8_t powerPin, uint8_t i2cAddressHex = ATLAS_RTD_I2C_ADDR,
+                       uint8_t measurementsToAverage = 1)
+     : AtlasParent(powerPin, i2cAddressHex, measurementsToAverage,
+                    "AtlasScientificRTD", ATLAS_RTD_NUM_VARIABLES,
+                    ATLAS_RTD_WARM_UP_TIME_MS, ATLAS_RTD_STABILIZATION_TIME_MS,
+                    ATLAS_RTD_MEASUREMENT_TIME_MS)
+    {}
+    ~AtlasScientificRTD(){}
 };
 
 // The class for the Temp Variable
@@ -51,10 +55,10 @@ class AtlasScientificRTD_Temp : public Variable
 public:
     AtlasScientificRTD_Temp(Sensor *parentSense,
                         const char *UUID = "", const char *customVarCode = "")
-      : Variable(parentSense, ATLASRTD_VAR_NUM,
-               "Temp", "C",
-               ATLASRTD_RESOLUTION,
-               "TempRange", UUID, customVarCode)
+      : Variable(parentSense, ATLAS_RTD_VAR_NUM,
+                 "temperature", "degreeCelsius",
+                 ATLAS_RTD_RESOLUTION,
+                 "AtlasTemp", UUID, customVarCode)
     {}
     ~AtlasScientificRTD_Temp(){}
 };
