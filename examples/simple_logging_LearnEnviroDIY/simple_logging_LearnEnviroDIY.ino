@@ -1,5 +1,5 @@
 /*****************************************************************************
-DRWI_NoCellular.ino
+simple_logging.ino
 Written By:  Sara Damiano (sdamiano@stroudcenter.org)
 Development Environment: PlatformIO
 Hardware Platform: EnviroDIY Mayfly Arduino Datalogger
@@ -9,9 +9,7 @@ Software License: BSD-3.
 
 This example sketch is written for ModularSensors library version 0.21.2
 
-This sketch is an example of logging data to an SD card as should be used by
-groups involved with The William Penn Foundation's Delaware River Watershed
-Initiative at sites without cellular service.
+This sketch is an example of logging data to an SD card
 
 DISCLAIMER:
 THIS CODE IS PROVIDED "AS IS" - NO WARRANTY IS GIVEN.
@@ -30,7 +28,7 @@ THIS CODE IS PROVIDED "AS IS" - NO WARRANTY IS GIVEN.
 // The library version this example was written for
 const char *libraryVersion = "0.21.2";
 // The name of this file
-const char *sketchName = "DRWI_NoCellular.ino";
+const char *sketchName = "simple_logging.ino";
 // Logger ID, also becomes the prefix for the name of the data file on SD card
 const char *LoggerID = "XXXXX";
 // How frequently (in minutes) to log data
@@ -64,52 +62,53 @@ ProcessorStats mcuBoard(mcuBoardVersion);
 // ==========================================================================
 //    Maxim DS3231 RTC (Real Time Clock)
 // ==========================================================================
-#include <sensors/MaximDS3231.h>
+#include <sensors/MaximDS3231.h>  // Includes wrapper functions for Maxim DS3231 RTC
 
-// Create a DS3231 sensor object
+// Create a DS3231 sensor object, using this constructor function:
 MaximDS3231 ds3231(1);
 
 
 // ==========================================================================
-//    CAMPBELL OBS 3 / OBS 3+ Analog Turbidity Sensor
+//    Settings for Additional Sensors
 // ==========================================================================
-#include <sensors/CampbellOBS3.h>
-
-const int8_t OBS3Power = sensorPowerPin;  // Pin to switch power on and off (-1 if unconnected)
-const uint8_t OBS3numberReadings = 10;
-const uint8_t ADSi2c_addr = 0x48;  // The I2C address of the ADS1115 ADC
-// Campbell OBS 3+ Low Range calibration in Volts
-const int8_t OBSLowADSChannel = 0;  // The ADS channel for the low range output
-const float OBSLow_A = 0.000E+00;  // The "A" value (X^2) from the low range calibration
-const float OBSLow_B = 1.000E+00;  // The "B" value (X) from the low range calibration
-const float OBSLow_C = 0.000E+00;  // The "C" value from the low range calibration
-
-// Create a Campbell OBS3+ LOW RANGE sensor object
-CampbellOBS3 osb3low(OBS3Power, OBSLowADSChannel, OBSLow_A, OBSLow_B, OBSLow_C, ADSi2c_addr, OBS3numberReadings);
-
-
-// Campbell OBS 3+ High Range calibration in Volts
-const int8_t OBSHighADSChannel = 1;  // The ADS channel for the high range output
-const float OBSHigh_A = 0.000E+00;  // The "A" value (X^2) from the high range calibration
-const float OBSHigh_B = 1.000E+00;  // The "B" value (X) from the high range calibration
-const float OBSHigh_C = 0.000E+00;  // The "C" value from the high range calibration
-
-// Create a Campbell OBS3+ HIGH RANGE sensor object
-CampbellOBS3 osb3high(OBS3Power, OBSHighADSChannel, OBSHigh_A, OBSHigh_B, OBSHigh_C, ADSi2c_addr, OBS3numberReadings);
+// Additional sensors can setup here, similar to the RTC, but only if
+//   they have been supported with ModularSensors wrapper functions. See:
+//   https://github.com/EnviroDIY/ModularSensors/wiki#just-getting-started
+// Syntax for the include statement and constructor function for each sensor is at
+//   https://github.com/EnviroDIY/ModularSensors/wiki#these-sensors-are-currently-supported
+//   or can be copied from the `menu_a_la_carte.ino` example
 
 
 // ==========================================================================
-//    Decagon CTD Conductivity, Temperature, and Depth Sensor
+//    Bosch BME280 Environmental Sensor (Temperature, Humidity, Pressure)
 // ==========================================================================
-#include <sensors/DecagonCTD.h>
+#include <sensors/BoschBME280.h>
 
-const char *CTDSDI12address = "1";  // The SDI-12 Address of the CTD
-const uint8_t CTDnumberReadings = 6;  // The number of readings to average
-const int8_t SDI12Power = sensorPowerPin;  // Pin to switch power on and off (-1 if unconnected)
-const int8_t SDI12Data = 7;  // The SDI12 data pin
+const int8_t I2CPower = sensorPowerPin;  // Pin to switch power on and off (-1 if unconnected)
+uint8_t BMEi2c_addr = 0x76;
+// The BME280 can be addressed either as 0x77 (Adafruit default) or 0x76 (Grove default)
+// Either can be physically mofidied for the other address
 
-// Create a Decagon CTD sensor object
-DecagonCTD ctd(*CTDSDI12address, SDI12Power, SDI12Data, CTDnumberReadings);
+// Create a Bosch BME280 sensor object
+BoschBME280 bme280(I2CPower, BMEi2c_addr);
+
+
+// ==========================================================================
+//    Maxim DS18 One Wire Temperature Sensor
+// ==========================================================================
+#include <sensors/MaximDS18.h>
+
+// OneWire Address [array of 8 hex characters]
+// If only using a single sensor on the OneWire bus, you may omit the address
+// DeviceAddress OneWireAddress1 = {0x28, 0xFF, 0xBD, 0xBA, 0x81, 0x16, 0x03, 0x0C};
+const int8_t OneWirePower = sensorPowerPin;  // Pin to switch power on and off (-1 if unconnected)
+const int8_t OneWireBus = 6;  // Pin attached to the OneWire Bus (-1 if unconnected) (D24 = A0)
+
+// Create a Maxim DS18 sensor objects (use this form for a known address)
+// MaximDS18 ds18(OneWireAddress1, OneWirePower, OneWireBus);
+
+// Create a Maxim DS18 sensor object (use this form for a single sensor on bus with an unknown address)
+MaximDS18 ds18(OneWirePower, OneWireBus);
 
 
 // ==========================================================================
@@ -118,19 +117,24 @@ DecagonCTD ctd(*CTDSDI12address, SDI12Power, SDI12Data, CTDnumberReadings);
 #include <VariableArray.h>
 
 Variable *variableList[] = {
-    new DecagonCTD_Cond(&ctd, "12345678-abcd-1234-efgh-1234567890ab"),
-    new DecagonCTD_Temp(&ctd, "12345678-abcd-1234-efgh-1234567890ab"),
-    new DecagonCTD_Depth(&ctd, "12345678-abcd-1234-efgh-1234567890ab"),
-    new CampbellOBS3_Turbidity(&osb3low, "12345678-abcd-1234-efgh-1234567890ab", "TurbLow"),
-    new CampbellOBS3_Turbidity(&osb3high, "12345678-abcd-1234-efgh-1234567890ab", "TurbHigh"),
-    new ProcessorStats_Batt(&mcuBoard, "12345678-abcd-1234-efgh-1234567890ab"),
-    new MaximDS3231_Temp(&ds3231, "12345678-abcd-1234-efgh-1234567890ab")
+    new ProcessorStats_SampleNumber(&mcuBoard),
+    new ProcessorStats_FreeRam(&mcuBoard),
+    new ProcessorStats_Batt(&mcuBoard),
+    new MaximDS3231_Temp(&ds3231),
+    new BoschBME280_Temp(&bme280),
+    new BoschBME280_Humidity(&bme280),
+    new BoschBME280_Pressure(&bme280),
+    new BoschBME280_Altitude(&bme280),
+    new MaximDS18_Temp(&ds18)
+    // Additional sensor variables can be added here, by copying the syntax
+    //   for creating the variable pointer (FORM1) from the `menu_a_la_carte.ino` example
+    // The example code snippets in the wiki are primarily FORM2.
 };
 // Count up the number of pointers in the array
 int variableCount = sizeof(variableList) / sizeof(variableList[0]);
 
 // Create the VariableArray object
-VariableArray varArray(variableCount, variableList);
+VariableArray varArray;
 
 
 // ==========================================================================
@@ -138,16 +142,8 @@ VariableArray varArray(variableCount, variableList);
 // ==========================================================================
 #include <LoggerBase.h>
 
-// Create a new logger instance
-Logger dataLogger(LoggerID, loggingInterval, &varArray);
-
-
-// Device registration and sampling feature information
-// This should be obtained after registration at http://data.envirodiy.org
-// This is needed so the logger file will be "drag-and-drop" ready for manual
-// upload to the portal.
-const char *registrationToken = "12345678-abcd-1234-efgh-1234567890ab";   // Device registration token
-const char *samplingFeature = "12345678-abcd-1234-efgh-1234567890ab";     // Sampling feature UUID
+// Create a logger instance
+Logger dataLogger;
 
 
 // ==========================================================================
@@ -157,24 +153,15 @@ const char *samplingFeature = "12345678-abcd-1234-efgh-1234567890ab";     // Sam
 // Flashes the LED's on the primary board
 void greenredflash(uint8_t numFlash = 4, uint8_t rate = 75)
 {
-    for (uint8_t i = 0; i < numFlash; i++) {
-        digitalWrite(greenLED, HIGH);
-        digitalWrite(redLED, LOW);
-        delay(rate);
-        digitalWrite(greenLED, LOW);
-        digitalWrite(redLED, HIGH);
-        delay(rate);
-    }
+  for (uint8_t i = 0; i < numFlash; i++) {
+    digitalWrite(greenLED, HIGH);
     digitalWrite(redLED, LOW);
-}
-
-
-// Read's the battery voltage
-// NOTE: This will actually return the battery level from the previous update!
-float getBatteryVoltage()
-{
-    if (mcuBoard.sensorValues[0] == -9999) mcuBoard.update();
-    return mcuBoard.sensorValues[0];
+    delay(rate);
+    digitalWrite(greenLED, LOW);
+    digitalWrite(redLED, HIGH);
+    delay(rate);
+  }
+  digitalWrite(redLED, LOW);
 }
 
 
@@ -208,49 +195,29 @@ void setup()
     // Blink the LEDs to show the board is on and starting up
     greenredflash();
 
-    // Set up some of the power pins so the board boots up with them off
-    // NOTE:  This isn't necessary at all.  The logger begin() function
-    // should leave all power pins off when it finishes.
-    if (sensorPowerPin >= 0)
-    {
-        pinMode(sensorPowerPin, OUTPUT);
-        digitalWrite(sensorPowerPin, LOW);
-    }
-
     // Set the timezone and offsets
     // Logging in the given time zone
     Logger::setTimeZone(timeZone);
     // Offset is the same as the time zone because the RTC is in UTC
     Logger::setTZOffset(timeZone);
 
-    // Attach information pins to the logger
+    // Set information pins
     dataLogger.setLoggerPins(wakePin, sdCardSSPin, sensorPowerPin, buttonPin, greenLED);
-    dataLogger.setSamplingFeatureUUID(samplingFeature);
 
-    // Begin the logger
-    dataLogger.begin();
+    // Begin the variable array[s], logger[s], and publisher[s]
+    varArray.begin(variableCount, variableList);
+    dataLogger.begin(LoggerID, loggingInterval, &varArray);
 
-    // Set up the sensors, except at lowest battery level
-    if (getBatteryVoltage() > 3.4)
-    {
-        Serial.println(F("Setting up sensors..."));
-        varArray.setupSensors();
-    }
+    // Set up the sensors
+    Serial.println(F("Setting up sensors..."));
+    varArray.setupSensors();
 
     // Create the log file, adding the default header to it
     // Do this last so we have the best chance of getting the time correct and
     // all sensor names correct
-    // Writing to the SD card can be power intensive, so if we're skipping
-    // the sensor setup we'll skip this too.
-    if (getBatteryVoltage() > 3.4)
-    {
-        dataLogger.turnOnSDcard(true);  // true = wait for card to settle after power up
-        dataLogger.createLogFile(true);  // true = write a new header
-        dataLogger.turnOffSDcard(true);  // true = wait for internal housekeeping after write
-    }
+    dataLogger.createLogFile(true);  // true = write a new header
 
     // Call the processor sleep
-    Serial.println(F("Putting processor to sleep"));
     dataLogger.systemSleep();
 }
 
@@ -258,16 +225,7 @@ void setup()
 // ==========================================================================
 // Main loop function
 // ==========================================================================
-
-// Use this short loop for simple data logging and sending
 void loop()
 {
-    // Note:  Please change these battery voltages to match your battery
-    // At very low battery, just go back to sleep
-    if (getBatteryVoltage() < 3.4)
-    {
-        dataLogger.systemSleep();
-    }
-    // If the battery is OK, log data
-    else dataLogger.logData();
+    dataLogger.logData();
 }

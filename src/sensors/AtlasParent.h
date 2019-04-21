@@ -30,7 +30,7 @@ class AtlasParent : public Sensor
 {
 public:
     AtlasParent(int8_t powerPin, uint8_t i2cAddressHex, uint8_t measurementsToAverage = 1,
-                const char *sensorName = "AtlasSensor", uint8_t numReturnedVars = 1,
+                const char *sensorName = "AtlasSensor", const uint8_t numReturnedVars = 1,
                 uint32_t warmUpTime_ms = 0, uint32_t stabilizationTime_ms = 0,
                 uint32_t measurementTime_ms = 0);
     virtual ~AtlasParent();
@@ -49,6 +49,11 @@ public:
 
 protected:
     int8_t _i2cAddressHex;
+    // Wait for a command to process
+    // NOTE:  This should ONLY be used as a wait when no response is
+    // expected except a status code - the response will be "consumed"
+    // and become unavailable.
+    bool waitForProcessing(uint32_t timeout = 1000L);
 };
 
 #endif  // Header Guard

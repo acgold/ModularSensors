@@ -7,7 +7,7 @@ Software License: BSD-3.
   Copyright (c) 2017, Stroud Water Research Center (SWRC)
   and the EnviroDIY Development Team
 
-This example sketch is written for ModularSensors library version 0.20.0
+This example sketch is written for ModularSensors library version 0.21.2
 
 This sketch is an example of logging data to an SD card
 
@@ -26,7 +26,7 @@ THIS CODE IS PROVIDED "AS IS" - NO WARRANTY IS GIVEN.
 //    Data Logger Settings
 // ==========================================================================
 // The library version this example was written for
-const char *libraryVersion = "0.20.0";
+const char *libraryVersion = "0.21.2";
 // The name of this file
 const char *sketchName = "simple_logging.ino";
 // Logger ID, also becomes the prefix for the name of the data file on SD card
@@ -50,10 +50,11 @@ const int8_t buttonPin = 21;      // MCU pin for a button to use to enter debugg
 const int8_t wakePin = A7;        // MCU interrupt/alarm pin to wake from sleep
 // Set the wake pin to -1 if you do not want the main processor to sleep.
 // In a SAMD system where you are using the built-in rtc, set wakePin to 1
-const int8_t sdCardPin = 12;      // MCU SD card chip select/slave select pin (must be given!)
-const int8_t sensorPowerPin = 22; // MCU pin controlling main sensor power (-1 if not applicable)
+const int8_t sdCardPwrPin = -1;     // MCU SD card power pin (-1 if not applicable)
+const int8_t sdCardSSPin = 12;      // MCU SD card chip select/slave select pin (must be given!)
+const int8_t sensorPowerPin = 22;  // MCU pin controlling main sensor power (-1 if not applicable)
 
-// Create and return the main processor chip "sensor" - for general metadata
+// Create the main processor chip "sensor" - for general metadata
 const char *mcuBoardVersion = "v0.5b";
 ProcessorStats mcuBoard(mcuBoardVersion);
 
@@ -61,10 +62,21 @@ ProcessorStats mcuBoard(mcuBoardVersion);
 // ==========================================================================
 //    Maxim DS3231 RTC (Real Time Clock)
 // ==========================================================================
-#include <sensors/MaximDS3231.h>
+#include <sensors/MaximDS3231.h>  // Includes wrapper functions for Maxim DS3231 RTC
 
-// Create and return the DS3231 sensor object
+// Create a DS3231 sensor object, using this constructor function:
 MaximDS3231 ds3231(1);
+
+
+// ==========================================================================
+//    Settings for Additional Sensors
+// ==========================================================================
+// Additional sensors can setup here, similar to the RTC, but only if
+//   they have been supported with ModularSensors wrapper functions. See:
+//   https://github.com/EnviroDIY/ModularSensors/wiki#just-getting-started
+// Syntax for the include statement and constructor function for each sensor is at
+//   https://github.com/EnviroDIY/ModularSensors/wiki#these-sensors-are-currently-supported
+//   or can be copied from the `menu_a_la_carte.ino` example
 
 
 // ==========================================================================
@@ -72,19 +84,20 @@ MaximDS3231 ds3231(1);
 // ==========================================================================
 #include <VariableArray.h>
 
-// FORM1: Create pointers for all of the variables from the sensors,
-// at the same time putting them into an array
 Variable *variableList[] = {
     new ProcessorStats_SampleNumber(&mcuBoard),
     new ProcessorStats_FreeRam(&mcuBoard),
     new ProcessorStats_Batt(&mcuBoard),
     new MaximDS3231_Temp(&ds3231)
+    // Additional sensor variables can be added here, by copying the syntax
+    //   for creating the variable pointer (FORM1) from the `menu_a_la_carte.ino` example
+    // The example code snippets in the wiki are primarily FORM2.
 };
 // Count up the number of pointers in the array
 int variableCount = sizeof(variableList) / sizeof(variableList[0]);
 
 // Create the VariableArray object
-VariableArray varArray(variableCount, variableList);
+VariableArray varArray;
 
 
 // ==========================================================================
@@ -92,8 +105,8 @@ VariableArray varArray(variableCount, variableList);
 // ==========================================================================
 #include <LoggerBase.h>
 
-// Create a new logger instance
-Logger dataLogger(LoggerID, loggingInterval, sdCardPin, wakePin, &varArray);
+// Create a logger instance
+Logger dataLogger;
 
 
 // ==========================================================================
@@ -152,11 +165,23 @@ void setup()
     Logger::setTZOffset(timeZone);
 
     // Set information pins
-    dataLogger.setAlertPin(greenLED);
-    dataLogger.setTestingModePin(buttonPin);
+    dataLogger.setLoggerPins(wakePin, sdCardSSPin, sensorPowerPin, buttonPin, greenLED);
 
-    // Begin the logger
-    dataLogger.begin();
+    // Begin the variable array[s], logger[s], and publisher[s]
+    varArray.begin(variableCount, variableList);
+    dataLogger.begin(LoggerID, loggingInterval, &varArray);
+
+    // Set up the sensors
+    Serial.println(F("Setting up sensors..."));
+    varArray.setupSensors();
+
+    // Create the log file, adding the default header to it
+    // Do this last so we have the best chance of getting the time correct and
+    // all sensor names correct
+    dataLogger.createLogFile(true);  // true = write a new header
+
+    // Call the processor sleep
+    dataLogger.systemSleep();
 }
 
 

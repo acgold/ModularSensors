@@ -28,9 +28,11 @@
 // Sensor Specific Defines
 #define ATLAS_PH_NUM_VARIABLES 1
 
-#define ATLAS_PH_WARM_UP_TIME_MS 0
+#define ATLAS_PH_WARM_UP_TIME_MS 850  // 846 in SRGD Tests
 #define ATLAS_PH_STABILIZATION_TIME_MS 0
-#define ATLAS_PH_MEASUREMENT_TIME_MS 900
+// NOTE:  Manual says measurement takes 900 ms, but in SRGD tests, no result was
+// available until 1656 ms
+#define ATLAS_PH_MEASUREMENT_TIME_MS 1660
 
 #define ATLAS_PH_RESOLUTION 3
 #define ATLAS_PH_VAR_NUM 0
@@ -42,9 +44,9 @@ public:
     AtlasScientificpH(int8_t powerPin, uint8_t i2cAddressHex = ATLAS_PH_I2C_ADDR,
                       uint8_t measurementsToAverage = 1)
      : AtlasParent(powerPin, i2cAddressHex, measurementsToAverage,
-                    "AtlasScientificpH", ATLAS_PH_NUM_VARIABLES,
-                    ATLAS_PH_WARM_UP_TIME_MS, ATLAS_PH_STABILIZATION_TIME_MS,
-                    ATLAS_PH_MEASUREMENT_TIME_MS)
+                   "AtlasScientificpH", ATLAS_PH_NUM_VARIABLES,
+                   ATLAS_PH_WARM_UP_TIME_MS, ATLAS_PH_STABILIZATION_TIME_MS,
+                   ATLAS_PH_MEASUREMENT_TIME_MS)
     {}
     ~AtlasScientificpH(){}
 };
@@ -54,11 +56,18 @@ class AtlasScientificpH_pH : public Variable
 {
 public:
     AtlasScientificpH_pH(Sensor *parentSense,
-                        const char *UUID = "", const char *customVarCode = "")
-      : Variable(parentSense, ATLAS_PH_VAR_NUM,
+                         const char *uuid = "",
+                         const char *varCode = "AtlaspH")
+      : Variable(parentSense,
+                 (const uint8_t)ATLAS_PH_VAR_NUM,
+                 (uint8_t)ATLAS_PH_RESOLUTION,
                  "pH", "pH",
-                 ATLAS_PH_RESOLUTION,
-                 "AtlaspH", UUID, customVarCode)
+                 varCode, uuid)
+    {}
+    AtlasScientificpH_pH()
+      : Variable((const uint8_t)ATLAS_PH_VAR_NUM,
+                 (uint8_t)ATLAS_PH_RESOLUTION,
+                 "pH", "pH", "AtlaspH")
     {}
     ~AtlasScientificpH_pH(){}
 };
